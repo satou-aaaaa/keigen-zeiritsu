@@ -395,7 +395,7 @@ const nextAch = (s) => achList(s).filter((a) => !a.done).sort((x, y) => (y.cur /
 
 // ---- 画面の部品 ----
 const md = (k) => `${+k.slice(5, 7)}/${+k.slice(8, 10)}`;
-const say = (t) => { const l = $("live"); l.textContent = ""; setTimeout(() => { l.textContent = t; }, 30); };
+const say = (t) => { const l = $("live"), v = VIEW; l.textContent = ""; setTimeout(() => { if (v === VIEW) l.textContent = t; }, 30); };
 function toast(t) { const d = document.createElement("div"); d.className = "toast"; d.setAttribute("role", "status"); d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 1800); }
 const buzz = (n = 12) => { try { if (!(window.A11y && A11y.on && A11y.on("calm")) && navigator.vibrate) navigator.vibrate(n); } catch (e) {} };
 const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -537,6 +537,7 @@ function solve() {
   let ok = false;
   save((s) => {
     const r = s.runs[MODE]; if (!same(r)) return; ok = true;
+    const o = r.cur && r.cur.i === c.i ? r.cur : null; if (o) { rec.m = Math.max(rec.m, o.m || 0); rec.h = Math.max(rec.h, o.hints || 0); }
     r.res.push(rec); r.cur = null; s.total++;
     s.dex[q.t] = (s.dex[q.t] || 0) + 1;
     if (r.mode === "e") { s.elast = q.t; const one = r.res.filter((x) => !x.m && !x.h).length; s.ebest = Math.max(s.ebest, one); }
