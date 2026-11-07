@@ -231,6 +231,7 @@ try {
     const n = await p.locator(".achs > div").count();
     check("実績は10〜14個で、まだのものは「いま/目標」を出す", n >= 10 && n <= 14 && (await p.textContent(".achs")).includes("いま "));
     await p.click("#back"); await p.click("#go-dex");
+    check("税率帳の上に、決め方の早見（6つ）がある", (await p.locator(".quick li").count()) === 6 && (await p.textContent(".quick")).includes("3分の2"));
     check("税率帳：まだの種類は名前を出さず「？？？」", (await p.locator(".dex .no").count()) > 0 && (await p.textContent(".dex .no")).includes("？？？"));
     await p.close();
   }

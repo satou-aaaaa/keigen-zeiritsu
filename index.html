@@ -96,6 +96,8 @@ button.sub:disabled{color:var(--ink2);cursor:default;border-style:dashed}
 .shares a,.shares button{display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font-size:14px;font-weight:800;text-decoration:none;padding:0 6px;box-sizing:border-box;font-family:inherit;cursor:pointer}
 .res{display:flex;flex-direction:column;gap:6px}
 .res div{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px}
+h2.sec{font-size:16px;margin:14px 0 6px}
+.quick{margin:0;padding:10px 12px 10px 30px;background:var(--paper);border:1px solid var(--line);border-radius:12px;font-size:13px;line-height:1.7}
 .dex{display:grid;grid-template-columns:1fr;gap:8px}
 .dex div{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.6}
 .dex div b{font-size:15px;color:var(--ok)}
@@ -367,6 +369,15 @@ function load() { let b = null; try { b = readOne(localStorage.getItem(KEY)); } 
 function save(fn) { const s = load(); fn(s); s.t = Math.max(Date.now(), (s.t || 0) + 1); const j = JSON.stringify(s); try { localStorage.setItem(KEY, j); mem = null; } catch (e) { mem = j; } return s; }
 function streak(days) { let k = todayKey(), n = 0; if (!days[k]) k = prevDay(k); while (days[k]) { n++; k = prevDay(k); } return n; }
 const playedDays = (s) => new Set([...Object.keys(s.days), ...Object.keys(s.hdays), ...Object.keys(s.adays)]).size;
+// 税率帳の早見：国税庁 Q&A（個別事例編）の決め方を短く
+const QUICK = [
+  "人が食べたり飲んだりするために売る物なら軽減税率（飲食料品）。ペットフード・種・苗は標準税率",
+  "お酒（酒税法のお酒）と医薬品・医薬部外品は標準税率。1度未満の飲み物やトクホは軽減税率",
+  "店が用意したテーブル・いすで食べさせると外食で標準税率。持ち帰り・届けるだけなら軽減税率",
+  "相手の所で調理や給仕をすると標準税率（出張料理など）。学校給食・老人ホームの食事は条件つきで軽減税率",
+  "おまけ付きは税抜1万円以下で、食べ物の値打ちが3分の2以上なら全体が軽減税率",
+  "定期購読で週2回以上出る紙の新聞は軽減税率。1部売り・電子版は標準税率",
+];
 const dexN = (s) => TY.filter((_, i) => (s.dex[i] || 0) > 0).length;
 // 取りこぼした日：きのう〜7日前（第1回より前は無し）で、今日の5問もあとからも遊んでいない日
 function lateDays(s) { const out = []; let k = todayKey(); for (let i = 0; i < 7; i++) { k = prevDay(k); if (k < EPOCH) break; if (!s.days[k] && !s.adays[k]) out.push(k); } return out; }
@@ -615,6 +626,8 @@ function result(mode, k, fresh1) {
 function dex() {
   const s = load();
   show(`<header><button class="icon" id="back" aria-label="ホームへもどる">←</button><h1>税率帳 ${dexN(s)}/${NT}<small>正しく選んだ品物の種類が集まります</small></h1><span></span></header>
+    <h2 class="sec">決め方の早見</h2><ol class="quick">${QUICK.map((x) => `<li>${esc(x)}</li>`).join("")}</ol>
+    <h2 class="sec">集めた種類</h2>
     <div class="dex">${TY.map((T, i) => (s.dex[i] ? `<div><b>✓ ${T.em} ${esc(T.name)}</b>（${s.dex[i]}回）<br>考えどころ：${esc(T.look)}</div>` : `<div class="no"><b>？？？</b>　まだ出会っていない種類</div>`)).join("")}</div>${footer()}`);
   $("back").onclick = home; bindFooter();
 }
