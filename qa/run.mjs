@@ -46,6 +46,12 @@ const KEY = "keigen-zeiritsu-v1"; // gitleaks:allow 記録の名前（鍵では�
   check("ちがう場面が60以上ある（好きなだけ遊んでも同じ問題が続かない）", keys.size >= 60, String(keys.size));
   check("国税庁 Q&A の決まりどおり（店の設備で食べる・調理しに来るのは標準税率、持ち帰り・届けるだけは軽減税率、お酒・医薬部外品は標準税率）", tx.length === 0, [...new Set(tx)].slice(0, 4).join(" / "));
   check("4枚の札（軽減・標準・かからない・分ける）が、どれも答えになる", MV.every((m) => okSeen.has(m)), MV.filter((m) => !okSeen.has(m)).join(","));
+  { // セット・おまけは、作った答えでなく Q&A の答えと照らす（問84・85・93）
+    const exp = [[/陶器/, W.M.S], [/ビールとおそうざい/, W.M.B], [/おもちゃ付き/, W.M.K], [/レジ前/, W.M.K]], miss = [];
+    for (let t = 0; t < W.TYPES.length; t++) for (let v = 0; v < W.FORMN[t]; v++) { const q = W.make({ t, v, s: 1 }); for (const [re, want] of exp) if (re.test(q.scene) && q.ok !== want) miss.push(q.scene); }
+    const found = exp.filter(([re]) => { for (let t = 0; t < W.TYPES.length; t++) for (let v = 0; v < W.FORMN[t]; v++) if (re.test(W.make({ t, v, s: 1 }).scene)) return true; return false; }).length;
+    check("セット・おまけ・レジ前の場面は Q&A の答えどおり（陶器入り＝標準、ビールとおそうざい＝分ける、おもちゃ付き・レジ前の持ち帰り＝軽減）", miss.length === 0 && found === exp.length, miss.join(" / ") + " 見つかった " + found);
+  }
   const NB = []; for (let t = 0; t < W.TYPES.length; t++) for (let v = 0; v < W.FORMN[t]; v++) NB.push(W.make({ t, v, s: 1 }).key);
   check("軽減税率と標準税率の答えが、どちらも3割以上（かたよらない）", ["K", "S"].every((k) => NB.filter((x) => x === k).length / NB.length >= 0.3), ["K", "S", "N", "B"].map((k) => k + NB.filter((x) => x === k).length).join(","));
   const NT = W.TYPES.length, cb = [];
@@ -241,6 +247,12 @@ try {
     check("同じ回の途中経過は、新しく保存したほうでなく進んだほうを残す", m2 === 2);
     const m3 = await p.evaluate(() => { const g = window.__gw, base = { mode: "d", id: "x", list: [1, 2, 3, 4, 5], res: [1, 2, 3, 4, 5].map(() => ({ m: 0, h: 0, t: 0 })) }; const a = Object.assign(g.fresh(), { t: 9, runs: { d: Object.assign({}, base, { date: "2026-11-11", res: [] }) } }), b = Object.assign(g.fresh(), { t: 5, runs: { d: Object.assign({}, base, { date: "2026-11-10" }) } }); const r = g.merge(a, b); return !!r.days["2026-11-10"] && r.runs.d.date === "2026-11-11"; });
     check("結果を見る前に別のタブが次の日を始めても、終えた日の記録を残す", m3);
+    await p.evaluate((K) => { const s = JSON.parse(localStorage.getItem(K)); const r = s.runs.d; r.cur = { i: r.res.length, ph: "pick", m: 0, hints: 0, bad: [], out: [], look: false, q: { ok: "にせ", scene: "<b>x</b>" }, it: { t: 0 } }; localStorage.setItem(K, JSON.stringify(s)); }, KEY);
+    await p.reload(); await p.click("#go-d").catch(() => {});
+    const cq = await p.evaluate(() => { const c = window.__gw.cur(); return c ? c.q.ok !== "にせ" && c.q.scene !== "<b>x</b>" : true; });
+    check("保存した途中経過に問題そのもの（q）が入っていても、作った問題を使う", cq);
+    const cl = await p.evaluate(() => { const g = window.__gw, v = g.clean(Object.assign(g.fresh(), { days: { "2026-11-09": { r: null }, "2026-11-08": { r: [{ m: 0, h: 0, t: 1 }] } }, hdays: { "2026-11-09": 3 } })); return Object.keys(v.days).join() + "|" + Object.keys(v.hdays).length; });
+    check("形のちがう日ごとの記録（r が並びでない）は読むときに外す", cl === "2026-11-08|0", cl);
     await p.evaluate((K) => localStorage.setItem(K, JSON.stringify({ v: 1, tut: true, days: "x", dex: { 0: "a" }, total: "zz", runs: [] })), KEY);
     await p.reload();
     check("壊れた記録（形のちがう値）でも画面が出る", (await p.locator("#go-d").count()) === 1);

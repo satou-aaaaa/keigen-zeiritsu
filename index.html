@@ -361,7 +361,7 @@ function merge(a, b) {
 }
 function readOne(j) { try { const v = JSON.parse(j); return v && v.v === 1 && typeof v === "object" ? clean(v) : null; } catch (e) { return null; } }
 // 引き継ぎや古い版で入った記録の形をそろえる（数でない値・入れ物でない値を直す）
-function clean(v) { const s = Object.assign(fresh(), v); for (const k of ["days", "hdays", "adays", "dex", "runs", "kofi", "ach"]) if (!s[k] || typeof s[k] !== "object" || Array.isArray(s[k])) s[k] = {}; for (const k of ["total", "ebest", "t"]) s[k] = Number.isFinite(+s[k]) ? +s[k] : 0; for (const k in s.dex) s.dex[k] = Number.isFinite(+s.dex[k]) ? +s.dex[k] : 0; return s; }
+function clean(v) { const s = Object.assign(fresh(), v); for (const k of ["days", "hdays", "adays", "dex", "runs", "kofi", "ach"]) if (!s[k] || typeof s[k] !== "object" || Array.isArray(s[k])) s[k] = {}; for (const k of ["total", "ebest", "t"]) s[k] = Number.isFinite(+s[k]) ? +s[k] : 0; for (const k in s.dex) s.dex[k] = Number.isFinite(+s.dex[k]) ? +s.dex[k] : 0; for (const b of ["days", "hdays", "adays"]) for (const k in s[b]) { const d = s[b][k]; if (!d || typeof d !== "object" || !Array.isArray(d.r) || !d.r.every((x) => x && typeof x === "object")) delete s[b][k]; } return s; }
 function load() { let b = null; try { b = readOne(localStorage.getItem(KEY)); } catch (e) {} const a = mem !== null ? readOne(mem) : null; if (a && b) return merge(a, b); return a || b || fresh(); }
 // 保存の前に読み直す（別のタブで進めた記録を消さない）
 function save(fn) { const s = load(); fn(s); s.t = Math.max(Date.now(), (s.t || 0) + 1); const j = JSON.stringify(s); try { localStorage.setItem(KEY, j); mem = null; } catch (e) { mem = j; } return s; }
@@ -466,7 +466,7 @@ function play() {
   if (run.mode === "e" && i >= run.list.length) { save((t) => { const r = t.runs[MODE]; if (r && r.id === run.id && r.list.length <= i) r.list = r.list.concat(endlessList(r.list[r.list.length - 1].t)); }); return play(); }
   const it = run.list[i], q = qOf(it), hard = run.mode === "h", ch = B.choices(it, hard ? 4 : 3);
   const sv = run.cur && run.cur.i === i && validCur(run.cur, q, ch) ? run.cur : null;
-  cur = Object.assign({ i, id: run.id, date: run.date, mode: run.mode, it, q, ch, hard, ph: "pick", m: 0, hints: 0, bad: [], out: [], look: false }, sv || {});
+  cur = Object.assign({ i, id: run.id, date: run.date, mode: run.mode, it, q, ch, hard, ph: "pick", m: 0, hints: 0, bad: [], out: [], look: false }, sv ? { ph: sv.ph, m: sv.m, hints: sv.hints, bad: sv.bad, out: sv.out, look: !!sv.look } : {});
   draw();
 }
 // 保存してあった途中経過が、この問題で正しいか
@@ -607,7 +607,7 @@ function result(mode, k, fresh1) {
     ${footer()}`);
   $("back").onclick = home; $("home").onclick = home; $("go-e").onclick = () => startRun("e");
   if ($("go-h")) $("go-h").onclick = () => startRun("h");
-  if ($("copy")) $("copy").onclick = async () => { try { if (navigator.share) await navigator.share({ text: txt }); else await navigator.clipboard.writeText(txt); toast("コピーしました"); } catch (e) {} };
+  if ($("copy")) $("copy").onclick = async () => { try { await navigator.clipboard.writeText(txt); toast("コピーしました"); } catch (e) { toast("コピーできませんでした"); } };
   bindFooter();
   say(`結果。${rec.r.map((x) => "星" + starsOf(x)).join("、")}。`);
 }
@@ -656,7 +656,7 @@ function about() {
   $("back").onclick = home; $("home").onclick = home; bindFooter();
 }
 // QA 用（外からは何もできない。記録を読むだけの窓口）
-window.__gw = { load, save, dailyList, hardList, endlessList, qOf, lateDays, achList, cur: () => cur, todayKey, merge, fresh };
+window.__gw = { clean, load, save, dailyList, hardList, endlessList, qOf, lateDays, achList, cur: () => cur, todayKey, merge, fresh };
 home();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
