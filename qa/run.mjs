@@ -191,6 +191,14 @@ try {
     check("もう一度開いても Ko-fi の1行は出さない", (await p.locator('.note a[href*="ko-fi"]').count()) === 0);
     await p.close();
   }
+  { // 保存できないブラウザ：帯で知らせ続け、保存できたら消す
+    const p = await newPage(390, 800, () => { window.__origSetItem = Storage.prototype.setItem; Storage.prototype.setItem = function () { throw new Error("full"); }; });
+    await closeHow(p); await p.click("#go-e"); await answer(p); await p.waitForTimeout(2000);
+    const warn = await p.locator("#savewarn").count(), txt = warn ? await p.textContent("#savewarn") : "", live = await p.evaluate(() => document.getElementById("live").textContent.includes("保存できませんでした"));
+    await p.evaluate(() => { Storage.prototype.setItem = window.__origSetItem; }); await p.click("#next"); await answer(p); await p.waitForTimeout(100);
+    check("保存できないと帯 #savewarn がちょうど1つ出て2秒たっても残り（#live でも読み上げ）、保存できるようになって次の問題を解くと消える", warn === 1 && txt.includes("保存できませんでした") && live && (await p.locator("#savewarn").count()) === 0, `帯 ${warn} 読み上げ ${live}`);
+    await p.close();
+  }
   { // とことん：並びを使い切っても続く・まちがえても続く・やめると結果
     const p = await newPage(390, 800, setDate("2026-11-10"));
     await closeHow(p); await p.click("#go-e");
@@ -276,6 +284,10 @@ try {
 } catch (e) {
   check("QA の操作が最後まで完了する", false, e.message.split("\n")[0] + " " + ((e.stack || "").match(/run\.mjs:\d+/) || [""])[0]);
 } finally {
+{ // 知らせ（.toast）は下のボタンを塞がない（shared-workflows incidents/2026-11-17-known-game-bugs-spread.md）
+  const pt = await browser.newPage(); await pt.goto(url);
+  check("知らせ（.toast）が出ていても、その下のボタンを押せる（pointer-events:none）", await pt.evaluate(() => { const d = document.createElement("div"); d.className = "toast"; document.body.appendChild(d); const v = getComputedStyle(d).pointerEvents; d.remove(); return v === "none"; }));
+  await pt.close(); }
   if (browser) await browser.close();
 }
 check("画面のエラーが無い", errors.length === 0, errors.slice(0, 3).join(" | "));
